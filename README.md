@@ -30,8 +30,14 @@ Many underserved communities face restricted access to network management knowle
 ## Contributing
 
 1. **Clone the Repository:**
+   ***https***
    ```bash
    git clone https://github.com/your-username/maa-connect.git
+   cd maa-connect
+   ```
+   ***SSH***
+   ```bash
+   git clone git@github.com:your-username/maa_connect.git
    cd maa-connect
    ```
 
