@@ -27,7 +27,7 @@ Many underserved communities face restricted access to network management knowle
 ### AI Model:
 - **DeepSeek**: Enables semantic search and efficient knowledge retrieval for troubleshooting guidance and network learning.
 
-## Installation
+## Contributing
 
 1. **Clone the Repository:**
    ```bash
@@ -66,7 +66,14 @@ Many underserved communities face restricted access to network management knowle
    - Submit unresolved network problems for further assistance via the built-in feedback system.
 
 
-## Contributing
+## Contact 
+
+For questions or feedback, please reach out to us:
+- [name] : [Email] 
+-
+-
+-
+-
 <!--
 We welcome contributions to enhance Maa Connect! Follow these steps to contribute:
 
