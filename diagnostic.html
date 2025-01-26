@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Troubleshooting</title>
+    <link href="https://cdn.tailwindcss.com" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            background-color: #f7f7f7;
+            font-family: 'Arial', sans-serif;
+        }
+        .card {
+            background-color: rgb(2, 0, 0);
+            border-radius: 8px;
+            width: 100%;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            padding: 30px 30px;
+            margin-bottom: 20px;
+        }
+        .card-header {
+            font-size: 1.5rem;
+            font-weight: 600;
+
+            color:#9e5050;
+            margin-bottom: 12px;
+        }
+        .button {
+            background-color: #4CAF50;
+            padding: 12px 20px;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 50%;
+            transition: background-color 0.3s;
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
+        .ping-ip {
+            padding: 12px;
+            border-radius: 5px;
+            margin-top: 12px;
+        }
+        .result {
+            padding: 12px;
+            border-radius: 5px;
+            margin-top: 12px;
+        }
+        .result.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .result.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        #ping-btn, #speed-test-btn, #scan-btn, #wifi-btn {
+            margin-top: 12px;
+        }
+        .result.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center py-12">
+
+<div class="container mx-auto p-6 max-w-4xl" style="background-color: rgb(0, 0, 0); border-radius: 8px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); padding: 60px; margin-bottom: 20px;">
+    <h1 class="text-4xl font-bold text-center text-gray-900 mb-8" style="color: aliceblue;">Network Troubleshooting</h1>
+    <p class="text-center text-lg text-gray-700 mb-12" style="color: antiquewhite;">Easily diagnose your network issues with the following tools.</p>
+
+    <!-- Step 1: Check internet connection -->
+    <div class="card">
+        <div class="card-header">1. Check Internet Connection</div>
+        <input id="ping-ip" type="text" placeholder="Enter IP address (default: 8.8.8.8)" value="8.8.8.8"
+               class="ping-ip"> 
+        <button id="ping-btn" class="button">Run Ping Test</button>
+        <div id="ping-result" class="result mt-4"></div>
+    </div>
+
+    <!-- Step 2: Check internet speed -->
+    <div class="card">
+        <div class="card-header">2. Check Internet Speed</div>
+        <button id="speed-test-btn" class="button">Run Speed Test</button>
+        <div id="speed-result" class="result mt-4"></div>
+    </div>
+
+    <!-- Step 3: Check connected devices -->
+    <div class="card">
+        <div class="card-header">3. Check Connected Devices</div>
+        <button id="scan-btn" class="button">Scan Network</button>
+        <ul id="devices-list" class="mt-4"></ul>
+    </div>
+
+    <!-- Step 4: Analyze wifi signals -->
+    <div class="card">
+        <div class="card-header">4. Analyze Wi-Fi Signals</div>
+        <button id="wifi-btn" class="button">Run Wi-Fi Diagnostic</button>
+        <ul id="wifi-signals" class="mt-4"></ul>
+    </div>
+
+</div>
+
+<script>
+    // Step 1: Ping Test
+    $('#ping-btn').click(function() {
+        const ip = $('#ping-ip').val();
+        $.get('http://127.0.0.1:5000/ping_test?target=' + ip, function(data) {
+            $('#ping-result').text(data.message
+
+             ).removeClass().addClass(`result ${data.status}`);
+        });
+    });
+
+
+
+
+// Speed Test
+$('#speed-test-btn').click(function() {
+    $('#speed-result').html('<p>Loading... Please wait.</p>').removeClass().addClass('result loading');
+    
+    $.get('/speed_test', function(data) {
+        $('#speed-result').html(`
+            <p>Download speed: ${data.download_speed} Mbps</p>
+            <p>Upload speed: ${data.upload_speed} Mbps</p>
+        `).removeClass().addClass('result success');
+    }).fail(function() {
+        $('#speed-result').html('<p>Error: Could not retrieve speed test results. Please try again later.</p>').removeClass().addClass('result error');
+    });
+});
+
+// Network Scan
+$('#scan-btn').click(function() {
+    $('#devices-list').html('<p>Loading... Please wait.</p>').removeClass().addClass('loading');
+    
+    $.get('/scan_network', function(data) {
+        $('#devices-list').empty();
+        if (data.devices && data.devices.length > 0) {
+            data.devices.forEach(function(device) {
+                $('#devices-list').append(`<li class="text-gray-800">${device}</li>`);
+            });
+        } else {
+            $('#devices-list').html('<p>No devices found on the network.</p>').removeClass().addClass('result error');
+        }
+    }).fail(function() {
+        $('#devices-list').html('<p>Error: Could not scan the network. Please try again later.</p>').removeClass().addClass('result error');
+    });
+});
+
+// Wi-Fi Diagnostic
+$('#wifi-btn').click(function() {
+    $('#wifi-signals').html('<p>Loading... Please wait.</p>').removeClass().addClass('loading');
+    
+    $.get('/wifi_diagnostic', function(data) {
+        $('#wifi-signals').empty();
+        if (data.weak_signals && data.weak_signals.length > 0) {
+            data.weak_signals.forEach(function(signal) {
+                $('#wifi-signals').append(`<li class="text-red-500">${signal}</li>`);
+            });
+        } else {
+            $('#wifi-signals').append('<li class="text-green-500">All Wi-Fi signals are strong!</li>');
+        }
+    }).fail(function() {
+        $('#wifi-signals').html('<p>Error: Could not perform Wi-Fi diagnostic. Please try again later.</p>').removeClass().addClass('result error');
+    });
+});
+
+</script>
+
+</body>
+</html>
