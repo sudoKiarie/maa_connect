@@ -3,7 +3,7 @@ from flask_cors import CORS
 from ping3 import ping
 import speedtest
 import random
-from tinyllama_module import tinyllama_response
+from utils.tinyllama_integration import TinyLlamaChatbot
 
 
 app = Flask(__name__)
@@ -83,7 +83,7 @@ def process_question():
 
     try:
         # Call the TinyLlama model to generate a response
-        response = tinyllama_response(question)
+        response = TinyLlamaChatbot.generate_response(question)
         return jsonify({"reply": response})
     except Exception as e:
         print(f"Error during TinyLlama processing: {e}")
