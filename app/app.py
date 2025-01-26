@@ -3,6 +3,8 @@ from flask_cors import CORS
 from ping3 import ping
 import speedtest
 import random
+from tinyllama_module import tinyllama_response
+
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -70,20 +72,22 @@ def get_network_topics():
 @app.route('/process_question', methods=['POST'])
 def process_question():
     """
-    Endpoint to process a question from the frontend.
+    Endpoint to process a question from the frontend using the TinyLlama model.
     """
     data = request.get_json()
     question = data.get('question')
     print(f"Received question: {question}")
-    
+
     if not question:
         return jsonify({"error": "No question provided"}), 400
 
-    # Simulate model processing for now (replace this with TinyLlama model interaction)
-    response = f"Processing your question: {question}"
-
-    # Return the response to the frontend
-    return jsonify({"reply": response})
+    try:
+        # Call the TinyLlama model to generate a response
+        response = tinyllama_response(question)
+        return jsonify({"reply": response})
+    except Exception as e:
+        print(f"Error during TinyLlama processing: {e}")
+        return jsonify({"error": "Failed to process the question. Please try again later."}), 500
 
 @app.route('/ping_test', methods=['GET', 'POST'])
 def ping_test():

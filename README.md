@@ -53,12 +53,20 @@ Many underserved communities face restricted access to network management knowle
    ```
 
 4. **Run the Application:**
+   On the app folder run:
    ```bash
-   flask run
+   python app.py
+   ```
+5. **Install Node Dependencies:**
+   The frontend is built using React. Now, you need to install the required Node.js dependencies.
+   Navigate to the frontend directory (usually where index.html is located).
+   Open a terminal in that directory and run
+   ```bash
+   npm install
    ```
 
-5. **Access the App:**
-   Open your browser and navigate to `http://127.0.0.1:5000`.
+##
+**Now Simply open the index.html and run the start the live server**
 
 ## Usage
 
@@ -80,24 +88,3 @@ For questions or feedback, please reach out to us:
 -
 -
 -
-<!--
-We welcome contributions to enhance Maa Connect! Follow these steps to contribute:
-
-1. Fork the repository.
-2. Create a new branch for your feature or bug fix:
-   ```bash
-   git checkout -b feature-name
-   ```
-3. Commit your changes:
-   ```bash
-   git commit -m "Add new feature"
-   ```
-4. Push to your branch:
-   ```bash
-   git push origin feature-name
-   ```
-5. Create a pull request describing your changes.
-
-
-## Contact
---!>
