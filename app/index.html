@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Network Management Support</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+</head>
+<body>
+    <div id="root" class="container mx-auto p-4"></div>
+    <script type="text/babel">
+    function NetworkSupportApp() {
+        const [networkTopics, setNetworkTopics] = React.useState({});
+        const [selectedCategory, setSelectedCategory] = React.useState(null);
+        const [selectedQuestion, setSelectedQuestion] = React.useState(null);
+        const [customQuestion, setCustomQuestion] = React.useState("");
+
+        React.useEffect(() => {
+            fetch('http://localhost:5000/get_network_topics')
+                .then(response => response.json())
+                .then(data => setNetworkTopics(data))
+                .catch(error => console.error('Error fetching network topics:', error));
+        }, []);
+
+        const handleCategorySelect = (category) => {
+            setSelectedCategory(category);
+            setSelectedQuestion(null); // Clear selected question when changing category
+        };
+
+        const handleQuestionSelect = (question) => {
+            setSelectedQuestion(question);
+
+            // Process the selected question to the backend
+            fetch('http://localhost:5000/process_question', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question }),
+            })
+                .then(response => response.json())
+                .then(data => console.log('Response from backend:', data))
+                .catch(error => console.error('Error processing question:', error));
+        };
+
+        const handleCustomQuestionSubmit = () => {
+            if (customQuestion.trim() !== "") {
+                setSelectedQuestion(customQuestion);
+                // process the custom question to the backend
+                fetch('http://localhost:5000/process_question', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: customQuestion }),
+                })
+                    .then(response => response.json())
+                    .then(data => console.log('Response from backend:', data))
+                    .catch(error => console.error('Error processing custom question:', error));
+            }
+        };
+
+        const handleBack = () => {
+            if (selectedQuestion) {
+                setSelectedQuestion(null); // Go back to question selection
+                setCustomQuestion(""); // Clear custom question input
+            } else {
+                setSelectedCategory(null); // Go back to category selection
+            }
+        };
+
+        const handleTroubleshoot = () => {
+            window.location.href = 'diagnostic.html'; // Redirect to the diagnostic page
+        };
+
+        return (
+            <div className="space-y-4">
+                <h1 className="text-3xl font-bold text-center mb-6">Network Support Troubleshooter</h1>
+
+                {/* Button container with Flexbox */}
+                <div className="flex justify-between mb-4">
+                    {/* Troubleshoot Button */}
+                    <button 
+                        onClick={handleTroubleshoot}
+                        className="bg-gray-200 p-2 rounded-lg text-blue-600 hover:bg-gray-300 transition duration-300"
+                    >
+                        Troubleshoot Your Network
+                    </button>
+
+                    {/* Back Button */}
+                    {(selectedCategory || selectedQuestion) && (
+                        <button 
+                            onClick={handleBack}
+                            className="bg-gray-200 p-2 rounded-lg text-blue-600 hover:bg-gray-300 transition duration-300"
+                        >
+                            Back
+                        </button>
+                    )}
+                </div>
+
+                {/* Category Selection */}
+                {!selectedCategory && (
+                    <div>
+                        <h2 className="text-xl mb-4 font-semibold">Select a Problem Category:</h2>
+                        <div className="grid md:grid-cols-3 gap-4">
+                            {Object.keys(networkTopics).map(category => (
+                                <button
+                                    key={category}
+                                    onClick={() => handleCategorySelect(category)}
+                                    className="p-3 border rounded-lg bg-gray-100 hover:bg-blue-100 transition duration-300"
+                                >
+                                    {category.replace('_', ' ').toUpperCase()}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Question Selection */}
+                {selectedCategory && !selectedQuestion && networkTopics[selectedCategory] && (
+                    <div>
+                        <h2 className="text-xl mb-4 font-semibold">Select a Specific Question:</h2>
+                        <div className="grid md:grid-cols-3 gap-4">
+                            {networkTopics[selectedCategory].map((question, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => handleQuestionSelect(question)}
+                                    className="p-3 border rounded-lg bg-gray-100 hover:bg-green-100 transition duration-300 text-left"
+                                >
+                                    {question}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Custom Question Input */}
+                        <div className="mt-4">
+                            <h3 className="text-lg font-semibold">Didn't find your question? Type it below:</h3>
+                            <input
+                                type="text"
+                                value={customQuestion}
+                                onChange={(e) => setCustomQuestion(e.target.value)}
+                                className="w-full p-2 border rounded-lg mt-2"
+                                placeholder="Type your question here"
+                            />
+                            <button
+                                onClick={handleCustomQuestionSubmit}
+                                className="mt-2 p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                            >
+                                Submit Question
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Display Selected Question */}
+                {selectedQuestion && (
+                    <div>
+                        <h2 className="text-xl font-semibold">Your Selected Question:</h2>
+                        <p className="mt-4 p-4 border rounded-lg bg-gray-50">{selectedQuestion}</p>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    ReactDOM.render(<NetworkSupportApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>
