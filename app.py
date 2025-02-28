@@ -1,8 +1,10 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from ping3 import ping
+import subprocess
+import platform
 import speedtest
-import random
+import re
 from utils.tinyllama_integration import TinyLlamaChatbot
 
 
@@ -83,7 +85,8 @@ def process_question():
 
     try:
         # Call the TinyLlama model to generate a response
-        response = TinyLlamaChatbot.generate_response(question)
+        networkbot = TinyLlamaChatbot()
+        response = networkbot.generate_response(question)
         return jsonify({"reply": response})
     except Exception as e:
         print(f"Error during TinyLlama processing: {e}")
@@ -115,28 +118,52 @@ def speed_test():
     except Exception as e:
         return jsonify(error="Error: Could not perform speed test. Please try again later."), 500
 
-@app.route('/scan_network', methods=['GET', 'POST'])
+@app.route('/scan_network', methods=['GET'])
 def scan_network():
+    """
+    Scan the local network and list connected devices.
+    """
     try:
-        # Example of connected devices, in a real scenario, scan your local network
-        connected_devices = ["Teacher laptop (192.168.1.101)", "Student laptop (192.168.1.102)", "Printer (192.168.1.103)"]
-        
-        return jsonify(devices=connected_devices)
-    except Exception as e:
-        return jsonify(error="Error: Could not scan the network. Please try again later."), 500
-
-@app.route('/wifi_diagnostic', methods=['GET', 'POST'])
-def wifi_diagnostic():
-    try:
-        weak_signals = random.choices(["Linksys", "Netgear", "Belkin"], k=3)
-        if weak_signals:
-            return jsonify(weak_signals=weak_signals)
+        devices = []
+        if platform.system() == "Windows":
+            output = subprocess.check_output("arp -a", shell=True).decode()
+            devices = re.findall(r"(\d+\.\d+\.\d+\.\d+)", output)  # Extract IPs
         else:
-            return jsonify(weak_signals=[])
-    except Exception as e:
-        return jsonify(error="Error: Could not perform Wi-Fi diagnostic. Please try again later."), 500
+            output = subprocess.check_output("sudo arp-scan -l", shell=True).decode()
+            devices = re.findall(r"(\d+\.\d+\.\d+\.\d+)", output)
 
+        return jsonify(devices=devices)
+    except Exception as e:
+        return jsonify(error="Error: Could not scan the network."), 500
+
+@app.route('/wifi_diagnostic', methods=['GET'])
+def wifi_diagnostic():
+    """
+    Run Wi-Fi diagnostics (signal strength, speed, and network name).
+    """
+    try:
+        wifi_info = {}
+        
+        if platform.system() == "Windows":
+            output = subprocess.check_output("netsh wlan show interfaces", shell=True).decode()
+            ssid = re.search(r"SSID\s*:\s(.+)", output)
+            signal = re.search(r"Signal\s*:\s(\d+)%", output)
+
+            wifi_info["SSID"] = ssid.group(1) if ssid else "Unknown"
+            wifi_info["Signal Strength (%)"] = signal.group(1) if signal else "Unknown"
+        
+        else:  # Linux/macOS
+            output = subprocess.check_output("iwconfig", shell=True).decode()
+            ssid = re.search(r'ESSID:"(.+?)"', output)
+            signal = re.search(r"Signal level=(-\d+)", output)
+
+            wifi_info["SSID"] = ssid.group(1) if ssid else "Unknown"
+            wifi_info["Signal Strength (dBm)"] = signal.group(1) if signal else "Unknown"
+
+        return jsonify(wifi_info=wifi_info)
+    except Exception as e:
+        return jsonify(error="Error: Could not perform Wi-Fi diagnostic."), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
-     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))

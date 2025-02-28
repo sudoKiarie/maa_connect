@@ -58,8 +58,15 @@ if st.sidebar.button("Run Speed Test"):
     response = requests.get(f"{BASE_URL}/speed_test")
     if response.status_code == 200:
         speeds = response.json()
-        st.sidebar.write(f"Download Speed: {speeds.get('download_speed')} Mbps")
-        st.sidebar.write(f"Upload Speed: {speeds.get('upload_speed')} Mbps")
+        st.sidebar.markdown(
+            f"<p style='color: green; font-size: 18px;'>Download Speed: {speeds.get('download_speed')} Mbps</p>",
+            unsafe_allow_html=True
+        )
+
+        st.sidebar.markdown(
+            f"<p style='color: green; font-size: 18px;'>Upload Speed: {speeds.get('upload_speed')} Mbps</p>",
+            unsafe_allow_html=True
+        )
     else:
         st.sidebar.error("Speed test failed.")
 

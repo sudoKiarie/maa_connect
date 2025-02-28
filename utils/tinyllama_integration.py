@@ -11,7 +11,7 @@ class TinyLlamaChatbot:
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
 
     @staticmethod
-    def remove_redundant_steps(text):
+    def remove_redundant_steps(text) -> str:
         """
         Remove redundant lines from the generated response.
         """
@@ -19,7 +19,7 @@ class TinyLlamaChatbot:
         seen = set()
         return "\n".join([line for line in lines if line.strip() and line not in seen and not seen.add(line)])
 
-    def format_conversation(self, question):
+    def format_conversation(self, question) -> str:
         """
         Format the conversation history for the model input.
         """
@@ -33,7 +33,7 @@ class TinyLlamaChatbot:
             conversation_history += f"<|{message['role']}|> {message['content']} </|{message['role']}|>\n"
         return conversation_history
 
-    def generate_response(self, question):
+    def generate_response(self, question) -> str:
         """
         Generate a response for the given question.
         """
