@@ -1,6 +1,5 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from ping3 import ping
 import subprocess
 import platform
 import speedtest
@@ -94,13 +93,25 @@ def process_question():
 
 @app.route('/ping_test', methods=['GET', 'POST'])
 def ping_test():
-    """"
-    Endpoint to perform a ping test.
+    """
+    Endpoint to perform a ping test and return latency.
     """
     target = request.args.get('target', '8.8.8.8')
-    latency = ping(target)
-    if latency:
-        return jsonify(status="success", message=f"Internet is working! The latency is {latency:.2f} ms.")
+
+    # Run the ping command with a timeout of 4 pings
+    result = subprocess.run(["ping", "-c", "4", target], capture_output=True, text=True)
+
+    if result.returncode == 0:
+        # Extract latency information from the ping output
+        # The output format is similar to: "rtt min/avg/max/mdev = 12.006/13.473/16.155/1.629 ms"
+        ping_output = result.stdout
+        latency_match = re.search(r'rtt min/avg/max/mdev = (\d+\.\d+/\d+\.\d+/\d+\.\d+/\d+\.\d+) ms', ping_output)
+
+        if latency_match:
+            latency = latency_match.group(1)  # The min/avg/max/mdev latency values
+            return jsonify(status="success", message=f"Internet is working! The latency is {latency}.")
+        else:
+            return jsonify(status="error", message="Unable to parse latency information!")
     else:
         return jsonify(status="error", message="Internet connection is down!")
 
