@@ -1,169 +1,71 @@
-from flask import Flask, jsonify, request
-from flask_cors import CORS
-from ping3 import ping
-import subprocess
-import platform
+# Install compatible versions
+!pip install --upgrade torch torchvision torchaudio transformers speedtest-cli sentencepiece accelerate gradio
+
+import gradio as gr
+from transformers import pipeline
 import speedtest
-import re
-from utils.tinyllama_integration import TinyLlamaChatbot
+import torch
 
+# Clear GPU cache
+torch.cuda.empty_cache()
 
-app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+# Load AI model
+model_name = "google/flan-t5-large"
+chatbot = pipeline("text2text-generation", model=model_name, device=0)
 
-# Network management topics for the chatbot
-network_topics = {
-    "router_issues": [
-        "How do I reset my router?",
-        "How do I change my WiFi password?",
-        "Why does my internet connection keep dropping?",
-        "How can I fix slow internet speeds?",
-        "How do I update my router's firmware?",
-        "What is port forwarding, and how do I set it up?",
-        "How do I configure the IP address on my router?"
-    ],
-    "connectivity_problems": [
-        "Why do I have no internet connection?",
-        "Why is my internet connection intermittent?",
-        "How do I fix issues with my network cable?",
-        "How do I troubleshoot my modem?",
-        "What is DNS configuration, and how can I fix it?",
-        "Why am I having problems with my network adapter?"
-    ],
-    "network_security": [
-        "How do I configure firewall settings?",
-        "What is WiFi security mode, and how do I set it?",
-        "How do I change the default credentials on my router?",
-        "How can I block unknown devices from accessing my network?",
-        "What is MAC address filtering, and how do I enable it?",
-        "How do I set up a VPN on my network?"
-    ],
-    "device_management": [
-        "How do I add a new device to my network?",
-        "How do I remove a device from my network?",
-        "How do I reserve an IP address for a specific device?",
-        "How can I allocate bandwidth to specific devices?",
-        "How do I prioritize certain devices on my network?",
-        "How can I view a network map of connected devices?"
-    ],
-    "advanced_networking": [
-        "What is subnet configuration, and how do I set it up?",
-        "How do I set up VLANs on my network?",
-        "What is network segmentation, and how do I implement it?",
-        "What is Quality of Service (QoS), and how do I configure it?",
-        "How do I enable bridge mode on my router?",
-        "How do I set up multiple access points for better coverage?"
-    ],
-    "troubleshooting_tools": [
-        "How do I perform a ping test?",
-        "What is traceroute, and how do I use it?",
-        "How can I run a speed test to check my internet?",
-        "What is network diagnostic mode, and how can I use it?",
-        "How do I analyze packet loss on my network?",
-        "How do I check the signal strength of my WiFi?"
-    ]
-}
+# Function to check network speed and troubleshoot
+def check_network_speed(user_issue):
+    if not user_issue.strip():
+        return "⚠️ **Please enter a valid network issue!**"
 
-@app.route('/get_network_topics', methods=['GET'])
-def get_network_topics():
-    """
-    Endpoint to retrieve network management topics.
-    """
-    return jsonify(network_topics)
+    # Show loading indicator
+    yield "⏳ **Analyzing network issue... Running speed test...**"
 
-@app.route('/process_question', methods=['POST'])
-def process_question():
-    """
-    Endpoint to process a question from the frontend using the TinyLlama model.
-    """
-    data = request.get_json()
-    question = data.get('question')
-    print(f"Received question: {question}")
+    # Run speed test
+    st_obj = speedtest.Speedtest()
+    download_speed = st_obj.download() / 1_000_000  # Convert to Mbps
+    upload_speed = st_obj.upload() / 1_000_000      # Convert to Mbps
+    ping_latency = st_obj.results.ping
 
-    if not question:
-        return jsonify({"error": "No question provided"}), 400
+    # **Prompt for AI model**
+    prompt = f"""
+A user is experiencing a network issue: "{user_issue}"
 
-    try:
-        # Call the TinyLlama model to generate a response
-        networkbot = TinyLlamaChatbot()
-        response = networkbot.generate_response(question)
-        return jsonify({"reply": response})
-    except Exception as e:
-        print(f"Error during TinyLlama processing: {e}")
-        return jsonify({"error": "Failed to process the question. Please try again later."}), 500
+Network Speed Test Results:
+- Download Speed: {download_speed:.2f} Mbps
+- Upload Speed: {upload_speed:.2f} Mbps
+- Ping: {ping_latency:.2f} ms
 
-@app.route('/ping_test', methods=['GET', 'POST'])
-def ping_test():
-    """"
-    Endpoint to perform a ping test.
-    """
-    target = request.args.get('target', '8.8.8.8')
-    latency = ping(target)
-    if latency:
-        return jsonify(status="success", message=f"Internet is working! The latency is {latency:.2f} ms.")
-    else:
-        return jsonify(status="error", message="Internet connection is down!")
+Provide exactly 5 different troubleshooting steps to help the user.
+Each step must be unique, actionable, and relevant to the problem.
+Avoid repeating steps or giving generic advice like "Check your internet".
+"""
 
-@app.route('/speed_test', methods=['GET', 'POST'])
-def speed_test():
-    """ 
-    Endpoint to perform a speed test.
-    """
-    try:
-        st = speedtest.Speedtest()
-        download_speed = st.download() / 1_000_000  # Convert from bits to Mbps
-        upload_speed = st.upload() / 1_000_000  # Convert from bits to Mbps
-        
-        return jsonify(download_speed=f"{download_speed:.2f}", upload_speed=f"{upload_speed:.2f}")
-    except Exception as e:
-        return jsonify(error="Error: Could not perform speed test. Please try again later."), 500
+    # Show processing status
+    yield f"⏳ **Analyzing speed test results... Generating troubleshooting steps...**"
 
-@app.route('/scan_network', methods=['GET'])
-def scan_network():
-    """
-    Scan the local network and list connected devices.
-    """
-    try:
-        devices = []
-        if platform.system() == "Windows":
-            output = subprocess.check_output("arp -a", shell=True).decode()
-            devices = re.findall(r"(\d+\.\d+\.\d+\.\d+)", output)  # Extract IPs
-        else:
-            output = subprocess.check_output("sudo arp-scan -l", shell=True).decode()
-            devices = re.findall(r"(\d+\.\d+\.\d+\.\d+)", output)
+    # Generate AI response
+    response = chatbot(prompt, max_length=250, do_sample=True, temperature=0.5, num_return_sequences=1)
 
-        return jsonify(devices=devices)
-    except Exception as e:
-        return jsonify(error="Error: Could not scan the network."), 500
+    # Final response
+    yield (
+        f"🔽 **Download Speed:** {download_speed:.2f} Mbps\n"
+        f"🔼 **Upload Speed:** {upload_speed:.2f} Mbps\n"
+        f"📶 **Ping Latency:** {ping_latency:.2f} ms\n\n"
+        f"### 🔍 Troubleshooting Steps:\n{response[0]['generated_text']}"
+    )
 
-@app.route('/wifi_diagnostic', methods=['GET'])
-def wifi_diagnostic():
-    """
-    Run Wi-Fi diagnostics (signal strength, speed, and network name).
-    """
-    try:
-        wifi_info = {}
-        
-        if platform.system() == "Windows":
-            output = subprocess.check_output("netsh wlan show interfaces", shell=True).decode()
-            ssid = re.search(r"SSID\s*:\s(.+)", output)
-            signal = re.search(r"Signal\s*:\s(\d+)%", output)
+# Gradio UI with compact design
+with gr.Blocks(theme=gr.themes.Base()) as iface:  # 🔹 Removes Gradio footer
+    gr.Markdown("## 📡 Network Troubleshooting Chatbot")
+    gr.Markdown("Enter your network issue, and the AI will diagnose the problem with a speed test and troubleshooting steps.")
 
-            wifi_info["SSID"] = ssid.group(1) if ssid else "Unknown"
-            wifi_info["Signal Strength (%)"] = signal.group(1) if signal else "Unknown"
-        
-        else:  # Linux/macOS
-            output = subprocess.check_output("iwconfig", shell=True).decode()
-            ssid = re.search(r'ESSID:"(.+?)"', output)
-            signal = re.search(r"Signal level=(-\d+)", output)
+    user_input = gr.Textbox(placeholder="Describe your network problem...", label="🔍 Enter Your Network Issue")
+    diagnose_button = gr.Button("Diagnose", variant="primary")  # 🔹 Ensures proper button display
 
-            wifi_info["SSID"] = ssid.group(1) if ssid else "Unknown"
-            wifi_info["Signal Strength (dBm)"] = signal.group(1) if signal else "Unknown"
+    output = gr.Markdown()  # 🔹 Output area
 
-        return jsonify(wifi_info=wifi_info)
-    except Exception as e:
-        return jsonify(error="Error: Could not perform Wi-Fi diagnostic."), 500
+    diagnose_button.click(fn=check_network_speed, inputs=user_input, outputs=output)
 
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+# Run Gradio app
+iface.launch()
