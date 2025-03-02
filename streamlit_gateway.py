@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 
 # Backend API URL
-BASE_URL = "http://localhost:5000"  # Update with your backend URL if deployed
+BASE_URL = "https://maa-connect-1.onrender.com"  # Update with your backend URL if deployed
 
 st.title("Network Management Support")
 
